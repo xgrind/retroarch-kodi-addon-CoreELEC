@@ -6,6 +6,7 @@ SHORT_NOTIFICATION=2000
 FIRST_RUN_FLAG_PREFIX=first_run_done
 BOOT_TO_RA_FLAG_TRUE=RETROARCH
 BOOT_TO_RA_FLAG_FALSE=KODI
+[ $DEVICE = "Amlogic-no" ] && MOUNT_CMD=mount.cifs || MOUNT_CMD=mount
 
 read -d '' ra_autostart_sh <<EOF
 #!/bin/sh
@@ -86,7 +87,7 @@ read -d '' retroarch_start <<EOF
 #restore symlinks as they seem to get broken by kodi addon installer
 restore_flattened_symlinks(){
 	cd \$1
-	[ \$? -eq 0 ] || { echo "symlinks restoring in $1 failed" ; return 1 ; }
+	[ \$? -eq 0 ] || { echo "symlinks restoring in \$1 failed" ; return 1 ; }
 
 	for file_src in * ; do
 		if [ ! -d \$file_src -a ! -L \$file_src ]; then
@@ -102,8 +103,8 @@ restore_flattened_symlinks(){
 
 #substitutes 'cp -n' as not available
 merge_dirs_maybe_no_clobber(){
-	[ ! -d "\$1" ] && return 1
-	[ ! -d "\$2" ] && return 2
+	[ -z "\$1" -o ! -d "\$1" ] && return 1
+	[ -z "\$2" -o ! -d "\$2" ] && return 2
 
 	for item in "\$1/"*; do
 		item_basename=\$( basename "\$item" )
@@ -123,7 +124,7 @@ merge_dirs_maybe_no_clobber(){
 copy_if_not_equal(){
 	item_basename=\$( basename "\$1" )
 	if [ -f "\$2/\$item_basename" ]; then
-		\$RA_ADDON_BIN_FOLDER/cmp "\$1" "\$2/\$item_basename"
+		\$RA_ADDON_BIN_FOLDER/cmp "\$1" "\$2/\$item_basename" 1>/dev/null 2>&1
 		[ \$? -eq 0 ] && return 1
 	fi
 	[ -z \$( echo \$SYSTEM_OVERWRITE_BLACKLIST | grep \$item_basename ) ] && cp -rf "\$1" "\$2/"
@@ -165,7 +166,7 @@ oe_setup_addon_fix() {
 sync_audio_settings(){
 KODI_AUDIO_SETTING=\$(cat \$HOME/.kodi/userdata/guisettings.xml | grep "audiooutput.audiodevice" | tr "" " " | sed -E 's|</.*>||' | sed -E 's|<.*>||' | sed 's| ||g')
 KODI_AUDIO_DRIVER=\$(echo \$KODI_AUDIO_SETTING | sed -E 's|:.*||')
-KODI_AUDIO_DEVICE=\$(echo \$KODI_AUDIO_SETTING | sed "s|\$KODI_AUDIO_DRIVER:||")
+KODI_AUDIO_DEVICE=\$(echo \$KODI_AUDIO_SETTING | sed "s|\$KODI_AUDIO_DRIVER:||;s#|.*##g")
 
 retroarch --features | tr "\\\\n" "|" |sed "s/|\\\\t\\\\t/ /g" | tr "|" "\\\\n" | grep -Eiq "\${KODI_AUDIO_DRIVER}.*yes"
 
@@ -238,7 +239,7 @@ ra_config_override(){
 	fi
 
 	if [ \$addon_res_dir_exists -eq 0 ] && [ \$config_res_dir_exists -eq 0 ]; then
-		if [ \$2 == 'merge_maybe_no_clobber' ]; then
+		if [ ! -z "\$2" -a "\$2" == 'merge_maybe_no_clobber' ]; then
 			merge_dirs_maybe_no_clobber "\${ADDON_DIR}/resources/\$1" "\${RA_CONFIG_DIR}/\$1"
 		else
 			cp -rf "\${ADDON_DIR}/resources/\$1" "\${RA_CONFIG_DIR}/\$1"
@@ -348,7 +349,7 @@ if [ "\$ra_roms_remote" = "true" ] ; then
 		RA_REMOTE_OPTS="\${RA_REMOTE_OPTS}vers=\${ra_roms_remote_vers}"
 	fi
 
-	[ ! -z "\$ra_roms_remote_path" ] && mount \$RA_REMOTE_OPTS_PRE "\$RA_REMOTE_OPTS" "\$ra_roms_remote_path" "\$ROMS_FOLDER"
+	[ ! -z "\$ra_roms_remote_path" ] && $MOUNT_CMD "\$ra_roms_remote_path" "\$ROMS_FOLDER" \$RA_REMOTE_OPTS_PRE "\$RA_REMOTE_OPTS"
 fi
 
 VIDEO_MODE_NEWRATE=\$VIDEO_MODE_RATE

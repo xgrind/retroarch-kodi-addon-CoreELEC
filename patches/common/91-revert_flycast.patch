@@ -4,8 +4,8 @@ index 330706cd8c..1fbaa46f5e 100644
 +++ b/packages/lakka/libretro_cores/flycast/package.mk
 @@ -1,5 +1,5 @@
  PKG_NAME="flycast"
--PKG_VERSION="a5967a283f65ae12f31765ee27a70ec82073a226"
-+PKG_VERSION="8a0323ec087f8bf85a419ac7ced575f6065d5758"
+-PKG_VERSION="7029e1615a215bc43e51f8eac605f31dd01ba8cd"
++PKG_VERSION="1153238e2c7700287293024144e6d02d4c6f2e16"
  PKG_LICENSE="GPLv2"
  PKG_SITE="https://github.com/flyinghead/flycast"
  PKG_URL="${PKG_SITE}.git"
