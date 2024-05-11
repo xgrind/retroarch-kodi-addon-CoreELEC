@@ -97,7 +97,7 @@ setup_general(){
 
 	#Lakka variables
 	[ -z "$DISTRONAME" ] && DISTRONAME="Lakka"
-	[ -z "$LAKKA_VERSION" ] && LAKKA_VERSION="ed7edc5d2f3b47e90ef2fb8958395a683920e94c"
+	[ -z "$LAKKA_VERSION" ] && LAKKA_VERSION="9d5e4aaa495f0e566115be65d7d32e675d9b78e3"
 	[ -z "$DISTRO_BUILD_SCRIPT" ] && DISTRO_BUILD_SCRIPT="scripts/build"
 	[ -z "$LAKKA_DIR" ] && LAKKA_DIR="${SCRIPT_DIR}/Lakka-LibreELEC"
 	if [ ! -d "$LAKKA_DIR" ] ; then
@@ -124,29 +124,31 @@ setup_packages(){
 
 	#Building libretro core variable list from Lakka sources
 	source "${LAKKA_DIR}/distributions/Lakka/options"
-	[ -z "$LIBRERETRO_CORES_ADD" ] && LIBRERETRO_CORES_ADD=""
-	[ -z "$LIBRERETRO_CORES_RM" ] && LIBRERETRO_CORES_RM=""
+
+	LIBRETRO_CORES=" $LIBRETRO_CORES"
 
 	#Disable/enable specific cores from default list
-	LIBRERETRO_CORES_ADD="$LIBRERETRO_CORES_ADD same_cdi"
-	LIBRERETRO_CORES_RM="$LIBRERETRO_CORES_RM mame"
+	LIBRETRO_CORES_ADD="same_cdi"
+	LIBRETRO_CORES_RM="mame"
 
 	#Disable specific cores per device/platform
 	if [ "$DEVICE" = "Amlogic-ng" ]; then
-		LIBRERETRO_CORES_ADD="$LIBRERETRO_CORES_ADD puae2021 mupen64plus"
-		LIBRERETRO_CORES_RM="$LIBRERETRO_CORES_RM puae mupen64plus_next kronos"
+		LIBRETRO_CORES_ADD="$LIBRETRO_CORES_ADD puae2021 mupen64plus"
+		LIBRETRO_CORES_RM="$LIBRETRO_CORES_RM puae mupen64plus_next kronos"
 	elif [ "$DEVICE" = "Amlogic-no" ]; then
-		LIBRERETRO_CORES_ADD="$LIBRERETRO_CORES_ADD puae2021"
-		LIBRERETRO_CORES_RM="$LIBRERETRO_CORES_RM puae chailove"
+		LIBRETRO_CORES_ADD="$LIBRETRO_CORES_ADD puae2021"
+		LIBRETRO_CORES_RM="$LIBRETRO_CORES_RM puae chailove"
 	fi
 
 	#Apply cores list modifications
-	for CORE in $LIBRERETRO_CORES_RM $LIBRERETRO_CORES_ADD ; do
+	for CORE in $LIBRETRO_CORES_RM $LIBRETRO_CORES_ADD ; do
 		LIBRETRO_CORES="${LIBRETRO_CORES// $CORE /}"
 	done
-	for CORE in $LIBRERETRO_CORES_ADD ; do
+
+	for CORE in $LIBRETRO_CORES_ADD ; do
 		LIBRETRO_CORES+=" $CORE "
 	done
+
 	PACKAGES_LIBRETRO_CORES="$LIBRETRO_CORES"
 
 	#Building retroarch core list
