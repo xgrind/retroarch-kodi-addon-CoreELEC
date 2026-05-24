@@ -112,7 +112,7 @@ setup_general(){
 setup_packages(){
 	#Misc packages variables
 	[ -z "$DISTRO_PACKAGES_SUBDIR" ] && DISTRO_PACKAGES_SUBDIR="packages"
-	[ -z "$PKG_TYPES" ] && PKG_TYPES="LIBRETRO_BASE LIBRETRO_CORES LAKKA_TOOLS AUDIO COMPRESS SYSTEM_TOOLS ADDON_DEPENDS MULTIMEDIA"
+	[ -z "$PKG_TYPES" ] && PKG_TYPES="LIBRETRO_BASE LIBRETRO_CORES LAKKA_TOOLS AUDIO COMPRESS SYSTEM_TOOLS ADDON_DEPENDS MULTIMEDIA WEB DEVEL"
 	[ -z "$PKG_SUBDIR_LIBRETRO_CORES" ] && PKG_SUBDIR_LIBRETRO_CORES="lakka/libretro_cores"
 	[ -z "$PKG_SUBDIR_LIBRETRO_BASE" ] && PKG_SUBDIR_LIBRETRO_BASE="lakka/retroarch_base"
 	[ -z "$PKG_SUBDIR_LAKKA_TOOLS" ] && PKG_SUBDIR_LAKKA_TOOLS="lakka/lakka_tools"
@@ -121,6 +121,8 @@ setup_packages(){
 	[ -z "$PKG_SUBDIR_SYSTEM_TOOLS" ] && PKG_SUBDIR_SYSTEM_TOOLS="addons/addon-depends/system-tools-depends"
 	[ -z "$PKG_SUBDIR_ADDON_DEPENDS" ] && PKG_SUBDIR_ADDON_DEPENDS="addons/addon-depends"
 	[ -z "$PKG_SUBDIR_MULTIMEDIA" ] && PKG_SUBDIR_MULTIMEDIA="multimedia"
+	[ -z "$PKG_SUBDIR_WEB" ] && PKG_SUBDIR_WEB="web"
+	[ -z "$PKG_SUBDIR_DEVEL" ] && PKG_SUBDIR_DEVEL="devel"
 
 	#Building libretro core variable list from Lakka sources
 	source "${LAKKA_DIR}/distributions/Lakka/options"
@@ -128,16 +130,18 @@ setup_packages(){
 	LIBRETRO_CORES=" $LIBRETRO_CORES"
 
 	#Disable/enable specific cores from default list
-	LIBRETRO_CORES_ADD="same_cdi"
+	LIBRETRO_CORES_ADD=""
 	LIBRETRO_CORES_RM="mame"
 
 	#Disable specific cores per device/platform
 	if [ "$DEVICE" = "Amlogic-ng" ]; then
-		LIBRETRO_CORES_ADD="$LIBRETRO_CORES_ADD puae2021 mupen64plus"
-		LIBRETRO_CORES_RM="$LIBRETRO_CORES_RM puae mupen64plus_next kronos"
+		LIBRETRO_CORES_FALLBACK="flycast_xtreme"
+		LIBRETRO_CORES_ADD="$LIBRETRO_CORES_ADD puae2021 mupen64plus same_cdi"
+		LIBRETRO_CORES_RM="$LIBRETRO_CORES_FALLBACK $LIBRETRO_CORES_RM puae mupen64plus_next kronos"
 	elif [ "$DEVICE" = "Amlogic-no" ]; then
+		LIBRETRO_CORES_FALLBACK="same_cdi mupen64plus_next mupen64plus chailove"
 		LIBRETRO_CORES_ADD="$LIBRETRO_CORES_ADD puae2021"
-		LIBRETRO_CORES_RM="$LIBRETRO_CORES_RM puae chailove"
+		LIBRETRO_CORES_RM="$LIBRETRO_CORES_FALLBACK $LIBRETRO_CORES_RM puae"
 	fi
 
 	#Apply cores list modifications
@@ -158,11 +162,13 @@ setup_packages(){
 
 	#Building other pkgs list
 	[ -z "$PACKAGES_LAKKA_TOOLS" ] && PACKAGES_LAKKA_TOOLS="joyutils sixpair empty xbox360_controllers_shutdown cec-mini-kb"
-        [ -z "$PACKAGES_AUDIO" ] && PACKAGES_AUDIO="flac libogg"
+        [ -z "$PACKAGES_AUDIO" ] && PACKAGES_AUDIO="flac libogg openal-soft"
 	[ -z "$PACKAGES_COMPRESS" ] && PACKAGES_COMPRESS="zstd"
 	[ -z "$PACKAGES_SYSTEM_TOOLS" ] && PACKAGES_SYSTEM_TOOLS="diffutils"
 	[ -z "$PACKAGES_ADDON_DEPENDS" ] && PACKAGES_ADDON_DEPENDS="libzip"
 	[ -z "$PACKAGES_MULTIMEDIA" ] && PACKAGES_MULTIMEDIA="ffmpeg dav1d"
+	[ -z "$PACKAGES_WEB" ] && PACKAGES_WEB="curl"
+	[ -z "$PACKAGES_DEVEL" ] && PACKAGES_DEVEL="libfmt"
 
 	#Aggregate entire package list
 	PACKAGES_ALL=""
@@ -242,7 +248,7 @@ EOF
 	echo
 
 	#Copying files from Lakka build to addon folders
-	echo "Copying packages:"
+	echo "Copying built packages:"
 	for suffix in $PKG_TYPES ; do
 		varname="PKG_SUBDIR_${suffix}"
 		path="${DISTRO_PACKAGES_SUBDIR}/${!varname}"
@@ -274,6 +280,41 @@ EOF
 	apply_patches revert
 	LAKKA_PATCHED=no
 	echo
+}
+
+add_fallback_precompiled_cores(){
+	if [ $DEVICE = "Amlogic-ng" ] ; then
+		sub_folder="arm7hf"
+	elif [ $DEVICE = "Amlogic-no" ] ; then
+		sub_folder="aarch64"
+	else
+		return 0
+	fi
+
+	FALLBACK_PRECOMPILED_CORES_DIR="${SCRIPT_DIR}/fallback-precompiled-cores"
+
+	#Copying files from Lakka build to addon folders
+	echo "Copying precompiled fallback packages:"
+	for package in $LIBRETRO_CORES_FALLBACK ; do
+		echo -ne "\t$package "
+		SRC="${FALLBACK_PRECOMPILED_CORES_DIR}/${sub_folder}/${package}_libretro.so.zip"
+		if [ -f "$SRC" ] ; then
+			unzip -q ${SRC} -d "${ADDON_DIR}/lib/libretro" &>>"$LOG"
+			[ $? -eq 0 ] && echo -e "$ok" || { echo -e "$fail" ; exit_script 1 ; }
+			maybe_add_fallback_precompiled_info ${package}
+		else
+			echo -e "$skip (zipped core not found)"
+			continue
+		fi
+	done
+	echo
+}
+
+maybe_add_fallback_precompiled_info(){
+	if [ $1 = "flycast_xtreme" ] ; then
+		cp -Rf "${ADDON_DIR}/lib/libretro/flycast_libretro.info" "${ADDON_DIR}/lib/libretro/flycast_xtreme_libretro.info" &>>"$LOG"
+		sed -i "s|Flycast|Flycast xtreme|g" "${ADDON_DIR}/lib/libretro/flycast_xtreme_libretro.info" &>>"$LOG"
+	fi
 }
 
 setup_addon(){
@@ -486,6 +527,8 @@ customize_retroarch(){
 	sed -i "s|^.*video_threaded =.*|video_threaded = \"false\"|g" $CFG
 	sed -i "s|^.*menu_core_enable =.*|menu_core_enable = \"true\"|g" $CFG
 	sed -i "s|^.*xmb_alpha_factor =.*|xmb_alpha_factor = \"100\"|g" $CFG
+	sed -i "s|^.*video_driver =.*|video_driver = \"glcore\"|g" $CFG
+	sed -i "s|^.*audio_driver =.*|audio_driver = \"openal\"|g" $CFG
 	[ $? -eq 0 ] && echo -e "$ok" || { echo -e "$fail" ; exit_script 1 ; }
 	echo
 }

@@ -1,11 +1,8 @@
 diff --git a/packages/lakka/libretro_cores/scummvm/package.mk b/packages/lakka/libretro_cores/scummvm/package.mk
-index 4570af767d..59feb28a6a 100644
+index ca12febd96..8fd0a44977 100644
 --- a/packages/lakka/libretro_cores/scummvm/package.mk
 +++ b/packages/lakka/libretro_cores/scummvm/package.mk
-@@ -1,19 +1,19 @@
- PKG_NAME="scummvm"
--PKG_VERSION="8ce898dcc55e56b75b12ba2a5023bb062e918198"
-+PKG_VERSION="2b4260db36733e9e05c4215d84ef8c0d23d5c932"
+@@ -3,18 +3,19 @@ PKG_VERSION="e1a7e2931877937a04e55f45a9eec6e6f7d471ff"
  PKG_LICENSE="GPLv3"
  PKG_SITE="https://github.com/libretro/scummvm"
  PKG_URL="${PKG_SITE}.git"
@@ -24,7 +21,10 @@ index 4570af767d..59feb28a6a 100644
 +                      USE_SYSTEM_vorbis=0 \
                        USE_SYSTEM_z=1 \
 -                      USE_SYSTEM_faad=1 \
+-                      USE_SYSTEM_freetype=1"
 +                      USE_SYSTEM_faad=0 \
-                       USE_SYSTEM_freetype=1"
++                      USE_SYSTEM_freetype=1 \
++                      FORCE_OPENGLES2=1"
  
  pre_make_target() {
+   if [ "${DEVICE}" = "OdroidGoAdvance" ]; then
